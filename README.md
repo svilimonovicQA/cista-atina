@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Čista Atina
 
-## Getting Started
+Platforma na kojoj građani Novog Sada prijavljuju mesta kojima treba čišćenje, krečenje, popravka mobilijara i slično. Volonteri ta mesta zatim sređuju.
 
-First, run the development server:
+**Stack:** Next.js 15 (App Router) + TypeScript, Tailwind CSS, Leaflet + OpenStreetMap, Supabase (PostgreSQL + PostGIS, Auth, Storage).
+
+## Pokretanje (oko 10 minuta)
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Otvori http://localhost:3000. Bez podešavanja se mapa prikazuje sa **demo podacima**.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Povezivanje sa bazom
+1. Napravi besplatan projekat na [supabase.com](https://supabase.com).
+2. U **SQL Editor** nalepi i pokreni [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql).
+3. Kopiraj `.env.example` u `.env.local` i popuni vrednosti iz *Project Settings → API*.
+4. Restartuj `npm run dev`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Da bi neko postao koordinator, posle prve prijave na sistem pokreni u SQL editoru:
+```sql
+update profiles set role = 'coordinator' where id = (select id from auth.users where email = 'ime@primer.rs');
+```
 
-## Learn More
+## Struktura
 
-To learn more about Next.js, take a look at the following resources:
+| Putanja | Šta je |
+|---|---|
+| `src/app/` | Stranice (rute) |
+| `src/components/map/` | Mapa: `MapView` (Leaflet), `ReportsExplorer` (filteri) |
+| `src/lib/supabase/` | Supabase klijenti za server i browser |
+| `src/lib/` | Tipovi, konstante (granice grada, statusi), demo podaci |
+| `supabase/migrations/` | SQL šema, RLS pravila, početne kategorije |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Model podataka (ukratko)
+- `reports`: prijava sa lokacijom (`geography(Point)`), kategorijom i statusom
+- `reports_public`: javni pogled bez emaila prijavioca, čita ga mapa
+- Statusi: `new → verified → planned → in_progress → done`, plus `rejected` i `duplicate`
+- Svaka promena statusa se automatski upisuje u `report_status_history`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Plan razvoja
+- [x] Postavka projekta, šema baze, mapa sa filterima
+- [ ] Forma za prijavu (GPS/pin, fotografija, Turnstile zaštita)
+- [ ] Stranica detalja prijave
+- [ ] Login i koordinatorski panel
+- [ ] PWA i deploy na Vercel
+- [ ] Faza 2: volonterske akcije, pre/posle galerija, obaveštenja, glasanje
+- [ ] Faza 3: statistika po mesnim zajednicama, višejezičnost (sr/ћир/hu/en)
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Doprinos
+Uzmi issue sa labelom `good first issue`, napravi granu i otvori PR. Pre slanja pokreni `npm run lint` i `npm run build`.
