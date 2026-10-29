@@ -188,6 +188,7 @@ function popupHtml(report: PublicReport, category: Category | undefined) {
   const color = category?.color ?? "#64748b";
   return `
     <div class="report-popup">
+      ${report.photo_url ? `<img class="report-popup-photo" src="${escapeHtml(report.photo_url)}" alt="" loading="lazy" />` : ""}
       <div class="report-popup-head">
         <span class="report-popup-icon" style="background:${color}1f">${category?.icon ?? "📍"}</span>
         <div>

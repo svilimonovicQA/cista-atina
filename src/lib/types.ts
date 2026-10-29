@@ -30,4 +30,6 @@ export type PublicReport = {
   upvotes_count: number;
   created_at: string;
   updated_at: string;
+  /** Prva fotografija „pre“; ne postoji u pogledu, dopunjuje se pri učitavanju. */
+  photo_url?: string | null;
 };

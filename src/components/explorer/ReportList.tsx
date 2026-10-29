@@ -39,13 +39,18 @@ export function ReportList({ reports, categoryById, selectedId, onSelect }: Prop
                   : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"
               }`}
             >
-              <span
-                className="flex size-10 shrink-0 items-center justify-center rounded-xl text-lg"
-                style={{ backgroundColor: `${category?.color ?? "#64748b"}1f` }}
-                aria-hidden="true"
-              >
-                {category?.icon ?? "📍"}
-              </span>
+              {report.photo_url ? (
+                // eslint-disable-next-line @next/next/no-img-element -- slike iz Supabase Storage-a
+                <img src={report.photo_url} alt="" loading="lazy" className="size-14 shrink-0 rounded-xl object-cover" />
+              ) : (
+                <span
+                  className="flex size-14 shrink-0 items-center justify-center rounded-xl text-xl"
+                  style={{ backgroundColor: `${category?.color ?? "#64748b"}1f` }}
+                  aria-hidden="true"
+                >
+                  {category?.icon ?? "📍"}
+                </span>
+              )}
               <span className="min-w-0 flex-1">
                 <span className="flex items-start justify-between gap-2">
                   <span className="truncate text-sm font-medium text-slate-900">{category?.name_sr ?? "Prijava"}</span>

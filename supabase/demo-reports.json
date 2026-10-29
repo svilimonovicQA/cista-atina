@@ -1,0 +1,102 @@
+[
+  {
+    "category": "ciscenje",
+    "description": "Plastične flaše i kese u žbunju pored šetališta, posebno kod tuševa.",
+    "lat": 45.2393,
+    "lng": 19.8452,
+    "address": "Štrand",
+    "district": "Liman 1",
+    "status": "new",
+    "daysAgo": 1
+  },
+  {
+    "category": "mobilijar",
+    "description": "Polomljene dve daske na klupi kod jezerceta, viri ekser.",
+    "lat": 45.2549,
+    "lng": 19.8511,
+    "address": "Dunavski park",
+    "district": "Stari grad",
+    "status": "verified",
+    "daysAgo": 4
+  },
+  {
+    "category": "grafiti",
+    "description": "Išaran zid podzemnog prolaza, crni sprej preko starog murala.",
+    "lat": 45.2531,
+    "lng": 19.8589,
+    "address": "Kej žrtava racije",
+    "district": "Stari grad",
+    "status": "planned",
+    "daysAgo": 9
+  },
+  {
+    "category": "zelenilo",
+    "description": "Neodržavan travnjak i korov do kolena oko dečjeg igrališta.",
+    "lat": 45.2432,
+    "lng": 19.8338,
+    "address": "Limanski park",
+    "district": "Liman 2",
+    "status": "new",
+    "daysAgo": 2
+  },
+  {
+    "category": "ciscenje",
+    "description": "Prepune kante, smeće razneto vetrom po travi.",
+    "lat": 45.2527,
+    "lng": 19.8214,
+    "address": "Futoški park",
+    "district": "Grbavica",
+    "status": "in_progress",
+    "daysAgo": 6
+  },
+  {
+    "category": "krecenje",
+    "description": "Oronula fasada na ulazu u zgradu, otpada malter, išarano grafitima.",
+    "lat": 45.2648,
+    "lng": 19.8176,
+    "address": "Rumenačka",
+    "district": "Detelinara",
+    "status": "new",
+    "daysAgo": 3
+  },
+  {
+    "category": "mobilijar",
+    "description": "Oborena i ulubljena kanta za smeće kod vidikovca.",
+    "lat": 45.2527,
+    "lng": 19.8626,
+    "address": "Petrovaradinska tvrđava",
+    "district": "Petrovaradin",
+    "status": "done",
+    "daysAgo": 18
+  },
+  {
+    "category": "ciscenje",
+    "description": "Divlja deponija građevinskog otpada i starog nameštaja iza zgrada.",
+    "lat": 45.2558,
+    "lng": 19.7892,
+    "address": "Bate Brkića",
+    "district": "Novo naselje",
+    "status": "verified",
+    "daysAgo": 12
+  },
+  {
+    "category": "zelenilo",
+    "description": "Polomljena grana posle oluje blokira pešačku stazu.",
+    "lat": 45.2381,
+    "lng": 19.8031,
+    "address": "Ilirska",
+    "district": "Telep",
+    "status": "new",
+    "daysAgo": 0
+  },
+  {
+    "category": "ostalo",
+    "description": "Ne radi ulična rasveta na stazi do škole, noću potpuni mrak.",
+    "lat": 45.2214,
+    "lng": 19.8392,
+    "address": "Karađorđeva",
+    "district": "Sremska Kamenica",
+    "status": "new",
+    "daysAgo": 5
+  }
+]

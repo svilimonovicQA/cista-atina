@@ -135,7 +135,24 @@ Kategorije se čuvaju u bazi (tabela `categories`), pa se dodaju i menjaju bez i
 
 **Tok čitanja:** početna stranica (`src/app/page.tsx`) je Server Component. Ona iz Supabase-a čita javni pogled `reports_public` i kategorije, pa ih prosleđuje klijentskoj komponenti `ReportsExplorer`. Ta komponenta drži stanje filtera i iscrtava mapu i listu.
 
-**Tok upisa (u izradi):** forma šalje podatke Server Action-u. On proverava Turnstile token i validira podatke Zod-om, pa tek onda upisuje prijavu preko service-role klijenta. Anonimni korisnici nikad ne pišu direktno u bazu.
+**Tok upisa (prijava problema):**
+
+```
+Forma (/prijavi)
+  ├─ pomeranje mape ──► lookupAddress()        ──► Nominatim (adresa i deo grada)
+  ├─ lokacija + kat. ──► findNearbyReports()   ──► RPC nearby_reports (mogući duplikati)
+  ├─ fotografije ─────► kompresija u browseru (max 1600 px, ~0,5 MB, bez EXIF-a)
+  └─ „Pošalji“ ───────► createReport()
+                          1. Zod validacija (ista šema kao u formi)
+                          2. provera fotografija (tip, veličina, najviše 3)
+                          3. Cloudflare Turnstile provera
+                          4. rate limit: najviše 5 prijava za 10 min sa iste IP adrese (čuva se samo heš)
+                          5. adresa iz koordinata (Nominatim)
+                          6. upis u `reports` + slike u Storage + `report_photos`
+                          7. osvežavanje mape ──► „Hvala!“ ──► /?prijava=<id>
+```
+
+Server akcije su u `src/server/reports.ts`. Anonimni korisnici nikad ne pišu direktno u bazu, već upis radi server preko service-role klijenta, i to tek posle svih provera.
 
 **Demo režim:** ako `.env.local` nije podešen, aplikacija prikazuje ugrađene demo podatke (`src/lib/demo-data.ts`). Tako se interfejs može razvijati bez baze.
 
@@ -175,6 +192,7 @@ profiles ─┬─< reports >── categories
 SQL se nalazi u [`supabase/migrations/`](supabase/migrations/):
 - `0001_init.sql`: tabele, tipovi, trigeri, RLS pravila, storage bucket, početne kategorije
 - `0002_grants.sql`: eksplicitna prava pristupa za uloge `anon`, `authenticated` i `service_role` (novi Supabase projekti ih ne dodeljuju automatski)
+- `0003_reporter_ip_hash.sql`: kolona sa hešom IP adrese za rate limit anonimnih prijava
 
 ---
 
@@ -184,8 +202,10 @@ SQL se nalazi u [`supabase/migrations/`](supabase/migrations/):
 - **Email prijavioca nikada nije javan.** Ne postoji u `reports_public`, a tabelu `reports` direktno čitaju samo koordinatori i sam prijavilac.
 - **Uloge ne može da menja sam korisnik.** Korisnik sme da izmeni samo svoje ime, preko dozvole na nivou kolone.
 - **Service-role ključ** se koristi isključivo na serveru, posle sopstvene provere. Nikad ne ide u browser i nema prefiks `NEXT_PUBLIC_`.
-- **Turnstile + rate limit** štite anonimne prijave od spama (u izradi).
-- **EXIF podaci** se brišu sa fotografija (planirano). Na formi stoji napomena o obradi podataka u skladu sa ZZPL.
+- **Turnstile + rate limit** štite anonimne prijave od spama. Sa jedne IP adrese može se poslati najviše 5 prijava za 10 minuta. U bazi se čuva samo SHA-256 heš IP adrese (sa tajnom „solju“), nikad sama adresa, i nije javno vidljiv.
+- **EXIF podaci** (GPS, model telefona) se brišu sa fotografija, jer se slika u browseru ponovo kodira pre slanja.
+- **Validacija na serveru:** sve što stigne iz forme se ponovo proverava (Zod šema, lokacija unutar Novog Sada, tip i veličina slika), bez obzira na proveru u browseru.
+- Na formi stoji napomena da se email koristi samo za obaveštenja o prijavi i da nije javan.
 
 ---
 
@@ -211,7 +231,7 @@ Otvori http://localhost:3000. **Bez dodatnog podešavanja aplikacija radi sa dem
 
 1. Napravi projekat na [supabase.com/dashboard](https://supabase.com/dashboard). Region: **Central EU (Frankfurt)**.
 2. Otvori **SQL Editor → New query**, nalepi sadržaj `supabase/migrations/0001_init.sql` i klikni **Run**.
-3. Ponovi isto za `supabase/migrations/0002_grants.sql`.
+3. Ponovi isto za `supabase/migrations/0002_grants.sql` i `0003_reporter_ip_hash.sql`, tim redom.
 4. Kopiraj `.env.example` u `.env.local` i popuni vrednosti:
 
 | Promenljiva | Gde se nalazi u Supabase dashboardu |
@@ -224,7 +244,18 @@ Otvori http://localhost:3000. **Bez dodatnog podešavanja aplikacija radi sa dem
 
 5. Restartuj `npm run dev`. Next.js čita env fajl samo pri pokretanju.
 
-### 3. Dodela uloge koordinatora
+### 3. Demo prijave (opciono)
+
+Da mapa ne bi bila prazna, u bazu možeš da upišeš 10 primera prijava na stvarnim lokacijama (Štrand, Dunavski park, Petrovaradinska tvrđava…):
+
+```bash
+npm run seed:demo              # dodaje demo prijave (bezbedno je pokrenuti više puta)
+npm run seed:demo -- --remove  # briše ih, npr. pre puštanja sajta u rad
+```
+
+Podaci se nalaze u [`supabase/demo-reports.json`](supabase/demo-reports.json). Iste prijave se prikazuju i u demo režimu bez baze.
+
+### 4. Dodela uloge koordinatora
 
 Posle prve prijave na sistem pokreni u SQL Editoru:
 
@@ -241,6 +272,7 @@ where id = (select id from auth.users where email = 'ime@primer.rs');
 | `npm run build` | Produkcioni build (uključuje proveru tipova) |
 | `npm run start` | Pokreće produkcioni build |
 | `npm run lint` | ESLint provera koda |
+| `npm run seed:demo` | Upisuje demo prijave u bazu (`-- --remove` ih briše) |
 
 ---
 
@@ -251,7 +283,8 @@ cista-atina/
 ├─ src/
 │  ├─ app/
 │  │  ├─ layout.tsx              # Osnovni HTML, fontovi, metapodaci
-│  │  ├─ page.tsx                # Početna: učitava prijave i kategorije
+│  │  ├─ page.tsx                # Početna: učitava prijave, kategorije i fotografije
+│  │  ├─ prijavi/page.tsx        # Stranica za prijavu problema
 │  │  ├─ globals.css             # Tailwind + stilovi mape (pinovi, klasteri, popup)
 │  │  └─ icon.svg                # Favicon / logo
 │  ├─ components/
@@ -261,17 +294,30 @@ cista-atina/
 │  │  │  ├─ Filters.tsx          # Čipovi kategorija, tabovi statusa
 │  │  │  ├─ ReportList.tsx       # Kartice prijava
 │  │  │  └─ Stats.tsx            # Brojači: nove / u radu / rešene
-│  │  └─ map/
-│  │     └─ MapView.tsx          # Leaflet mapa, klasteri, popup, „moja lokacija“
+│  │  ├─ map/
+│  │  │  └─ MapView.tsx          # Leaflet mapa, klasteri, popup, „moja lokacija“
+│  │  └─ report-form/
+│  │     ├─ ReportForm.tsx       # Forma za prijavu (5 koraka) i ekran „Hvala!“
+│  │     ├─ LocationPicker.tsx   # Mapa sa fiksnim pinom u centru + GPS
+│  │     ├─ PhotoInput.tsx       # Izbor, kompresija i pregled fotografija
+│  │     └─ Turnstile.tsx        # Cloudflare Turnstile widget
 │  ├─ lib/
 │  │  ├─ supabase/server.ts      # Supabase klijent za server (+ service-role klijent)
 │  │  ├─ supabase/client.ts      # Supabase klijent za browser
 │  │  ├─ constants.ts            # Naziv, granice grada, statusi i njihove boje
 │  │  ├─ format.ts               # „pre 3 dana“, srpska množina
 │  │  ├─ types.ts                # TypeScript tipovi
+│  │  ├─ validation.ts           # Zod šema prijave, pravila za fotografije
+│  │  ├─ geocoding.ts            # Adresa iz koordinata (Nominatim)
+│  │  ├─ turnstile.ts            # Serverska provera Turnstile tokena
 │  │  └─ demo-data.ts            # Demo prijave (kada baza nije podešena)
+│  ├─ server/
+│  │  └─ reports.ts              # Server akcije: createReport, lookupAddress, findNearbyReports
 │  └─ middleware.ts              # Osvežavanje Supabase sesije
-├─ supabase/migrations/          # SQL šema baze
+├─ supabase/
+│  ├─ migrations/                # SQL šema baze
+│  └─ demo-reports.json          # 10 demo prijava (za seed i demo režim)
+├─ scripts/seed-demo.mjs         # Upis i brisanje demo prijava
 ├─ .env.example                  # Šablon za .env.local
 └─ README.md
 ```
@@ -309,15 +355,29 @@ cista-atina/
 - [x] **Mobilni:** plutajući logo i čipovi na vrhu, donji panel sa listom koji se izvlači
 - [x] Logo i favicon
 
+### Prijava problema (`/prijavi`)
+- [x] Izbor lokacije: pin je fiksiran u centru i pomera se mapa, uz dugme „Koristi moju lokaciju“ (automatski, ako je dozvola već data)
+- [x] Prikaz adrese i dela grada za izabranu lokaciju (Nominatim)
+- [x] Izbor kategorije karticama
+- [x] Upozorenje ako u krugu od 30 m već postoji otvorena prijava iste kategorije
+- [x] Opis sa brojačem karaktera
+- [x] Do 3 fotografije: kamera ili galerija, kompresija u browseru, brisanje EXIF-a, pregled i uklanjanje
+- [x] Opcioni email za obaveštenje
+- [x] Cloudflare Turnstile zaštita
+- [x] Validacija u formi i na serveru, greške prikazane uz svako polje
+- [x] Rate limit po IP adresi (heš)
+- [x] Ekran „Hvala!“ sa linkom koji otvara novu prijavu na mapi
+- [x] Fotografije se prikazuju u popup-u na mapi i u listi prijava
+
 ---
 
 ## 🛣️ Plan razvoja (roadmap)
 
 ### Faza 1: MVP
 - [x] Postavka projekta, šema baze, mapa sa filterima
-- [ ] **Forma za prijavu:** lokacija preko GPS-a ili pomeranjem pina, fotografija sa kamere, kategorija, opis, Turnstile
-- [ ] Upozorenje o duplikatu pre slanja (`nearby_reports`)
-- [ ] Automatska adresa iz koordinata (Nominatim reverse geocoding)
+- [x] Forma za prijavu: lokacija, fotografije, kategorija, opis, Turnstile
+- [x] Upozorenje o duplikatu pre slanja (`nearby_reports`)
+- [x] Automatska adresa iz koordinata (Nominatim reverse geocoding)
 - [ ] Stranica detalja prijave `/prijava/[id]`: galerija, istorija statusa, deljenje
 - [ ] Prijava na sistem (magic link)
 - [ ] Koordinatorski panel `/admin`: promena statusa, spajanje duplikata, moderacija
@@ -366,6 +426,8 @@ cista-atina/
 | Problem | Rešenje |
 |---|---|
 | `permission denied for table ...` (kod `42501`) | Nije pokrenuta migracija `0002_grants.sql` |
+| „Prijava nije sačuvana“ / `column reports.reporter_ip_hash does not exist` | Nije pokrenuta migracija `0003_reporter_ip_hash.sql` |
+| „Provera da nisi robot nije uspela“ | Turnstile ključevi ne odgovaraju domenu. Za lokalni rad koristi test ključeve iz tabele iznad. |
 | `relation "reports_public" does not exist` | Nije pokrenuta migracija `0001_init.sql` |
 | I dalje se vide demo podaci | `.env.local` nije popunjen ili server nije restartovan |
 | Mapa je prazna | Normalno za novu bazu, jer još nema prijava |

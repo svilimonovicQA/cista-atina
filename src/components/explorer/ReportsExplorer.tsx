@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useCallback, useMemo, useRef, useState } from "react";
 
 import { Logo } from "@/components/brand/Logo";
@@ -25,14 +26,16 @@ type Props = {
   reports: PublicReport[];
   categories: Category[];
   demo: boolean;
+  /** Prijava koju treba odmah prikazati (npr. posle slanja forme). */
+  initialReportId: string | null;
 };
 
-export default function ReportsExplorer({ reports, categories, demo }: Props) {
+export default function ReportsExplorer({ reports, categories, demo, initialReportId }: Props) {
   const [activeCategories, setActiveCategories] = useState<Set<number>>(new Set());
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [focus, setFocus] = useState<MapFocus | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialReportId);
+  const [focus, setFocus] = useState<MapFocus | null>(initialReportId ? { id: initialReportId, seq: 0 } : null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -89,10 +92,6 @@ export default function ReportsExplorer({ reports, categories, demo }: Props) {
     setSelectedId(id);
     document.getElementById(`report-${id}`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, []);
-
-  function openReportForm() {
-    showToast("Forma za prijavu stiže uskoro. Hvala na strpljenju! 🙌");
-  }
 
   const chips = (scroll: boolean) => (
     <CategoryChips
@@ -162,14 +161,13 @@ export default function ReportsExplorer({ reports, categories, demo }: Props) {
         </div>
 
         {/* Dugme za prijavu */}
-        <button
-          type="button"
-          onClick={openReportForm}
+        <Link
+          href="/prijavi"
           className="absolute bottom-[92px] left-1/2 z-[1000] flex -translate-x-1/2 items-center gap-2 rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/30 transition hover:bg-emerald-700 active:scale-95 md:bottom-auto md:left-auto md:right-5 md:top-5 md:translate-x-0"
         >
           <PlusIcon />
           Prijavi problem
-        </button>
+        </Link>
 
         {/* Donji panel (mobilni) */}
         <div className="absolute inset-x-0 bottom-0 z-[1001] rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.12)] md:hidden">
